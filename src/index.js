@@ -1,11 +1,16 @@
-// Commit: chore: inicia projeto com estrutura de pastas base
-
-// src/index.js
 const app = require("./app");
+const { PrismaClient } = require('@prisma/client');
 
+const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
+// Inicia o servidor
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT} 🚀`);
 });
 
+// Encerra conexão do Prisma ao sair
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
