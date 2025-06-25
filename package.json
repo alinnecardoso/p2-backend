@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Nenhum teste definido ainda.\"",
+    "start": "node src/index.js",
     "prepare": "husky install"
   },
   "keywords": [],
