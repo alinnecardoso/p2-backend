@@ -17,17 +17,19 @@ const getUserById = async (req, res) => {
 
 const createUser = async (req, res) => {
   const { name, email } = req.body;
+
   if (!name || !email) {
     return res.status(400).json({ message: "Nome e email são obrigatórios" });
   }
-  const newUser = await prisma.user.create({
-    data: { name, email },
-  });
-  res.status(201).json(newUser);
-};
-
-const updateUser = async (req, res) => {
-  const { name, email } = req.body;
+  try {
+    const newUser = await prisma.user.create({
+      data: { name, email },
+    });
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(400).json({ message: "Erro ao criar usuário", error: error.message });
+  }
+  
   try {
     const updatedUser = await prisma.user.update({
       where: { id: parseInt(req.params.id) },

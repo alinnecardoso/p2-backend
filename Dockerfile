@@ -13,6 +13,9 @@ RUN npm install
 # Copia o restante do código da API
 COPY . .
 
+# Gera o Prisma Client dentro da imagem
+RUN npx prisma generate
+
 # Expõe a porta da sua API (ajuste se não for 3000)
 EXPOSE 3000
 
