@@ -21,25 +21,17 @@ const createUser = async (req, res) => {
   if (!name || !email) {
     return res.status(400).json({ message: "Nome e email são obrigatórios" });
   }
+
   try {
     const newUser = await prisma.user.create({
       data: { name, email },
     });
-    res.status(201).json(newUser);
+    return res.status(201).json(newUser);
   } catch (error) {
-    res.status(400).json({ message: "Erro ao criar usuário", error: error.message });
-  }
-  
-  try {
-    const updatedUser = await prisma.user.update({
-      where: { id: parseInt(req.params.id) },
-      data: { name, email },
-    });
-    res.json(updatedUser);
-  } catch (error) {
-    res.status(404).json({ message: "Usuário não encontrado" });
+    return res.status(400).json({ message: "Erro ao criar usuário", error: error.message });
   }
 };
+
 
 const deleteUser = async (req, res) => {
   try {
@@ -51,6 +43,22 @@ const deleteUser = async (req, res) => {
     res.status(404).json({ message: "Usuário não encontrado" });
   }
 };
+
+const updateUser = async (req, res) => {
+  const { name, email } = req.body;
+
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { id: parseInt(req.params.id) },
+      data: { name, email },
+    });
+    res.json(updatedUser);
+  } catch (error) {
+    console.error(`[ERROR] PUT /users/${req.params.id} - ${error.message}`);
+    res.status(404).json({ message: "Usuário não encontrado" });
+  }
+};
+
 
 module.exports = {
   getAllUsers,
