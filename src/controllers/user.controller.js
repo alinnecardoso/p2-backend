@@ -1,3 +1,4 @@
+// src/controllers/user.controller.js
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -20,7 +21,6 @@ const createUser = async (req, res) => {
   if (!name || !email) {
     return res.status(400).json({ message: "Nome e email são obrigatórios" });
   }
-
   try {
     const newUser = await prisma.user.create({
       data: { name, email },
@@ -29,11 +29,7 @@ const createUser = async (req, res) => {
   } catch (error) {
     res.status(400).json({ message: "Erro ao criar usuário", error: error.message });
   }
-};
-
-const updateUser = async (req, res) => {
-  const { name, email } = req.body;
-
+  
   try {
     const updatedUser = await prisma.user.update({
       where: { id: parseInt(req.params.id) },
