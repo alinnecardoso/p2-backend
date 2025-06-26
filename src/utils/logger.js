@@ -1,35 +1,27 @@
 require("dotenv").config();
-const { createLogger, format, transports } = require("winston");
-const axios = require("axios");
+const winston = require("winston");
 
-const betterstackTransport = {
-  log: (info, callback) => {
-    axios.post(process.env.BETTERSTACK_HOST, {
-      message: info.message,
-      level: info.level,
-    }, {
-      headers: {
-        Authorization: process.env.BETTERSTACK_TOKEN,
-        "Content-Type": "application/json",
-      },
-    }).catch(err => {
-      console.error("Erro ao enviar log para BetterStack:", err.message);
-    });
-
-    callback();
-  },
-};
-
-const logger = createLogger({
+const logger = winston.createLogger({
   level: "info",
-  format: format.combine(
-    format.timestamp(),
-    format.json()
-  ),
+  format: winston.format.json(),
+  defaultMeta: { service: "p2-backend" },
   transports: [
-    new transports.Console({ format: format.simple() }),
-    betterstackTransport
+    new winston.transports.Console({
+      format: winston.format.simple(),
+    }),
   ],
 });
+
+// Só adiciona o transport HTTP se estiver com variáveis definidas
+if (process.env.BETTERSTACK_HOST && process.env.BETTERSTACK_TOKEN) {
+  logger.add(
+    new winston.transports.Http({
+      host: process.env.BETTERSTACK_HOST.replace(/^https?:\/\//, ""), // remove http:// ou https://
+      path: `/logs/${process.env.BETTERSTACK_TOKEN}`,
+      port: 443,
+      ssl: true,
+    })
+  );
+}
 
 module.exports = logger;
