@@ -13,6 +13,9 @@ RUN npm install
 # Copia o restante do código da API
 COPY . .
 
+# Copia as variáveis de ambiente
+COPY .env .env
+
 # Gera o Prisma Client dentro da imagem
 RUN npx prisma generate
 
