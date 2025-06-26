@@ -13,13 +13,13 @@ RUN npm install
 # Copia o restante do código da API
 COPY . .
 
-# Copia as variáveis de ambiente
-COPY .env .env
+# ⚠️ Removido: COPY .env .env (Render fornece as variáveis no ambiente)
+# Se quiser rodar localmente, use docker-compose com --env-file
 
 # Gera o Prisma Client dentro da imagem
 RUN npx prisma generate
 
-# Expõe a porta da sua API (ajuste se não for 3000)
+# Expõe a porta da sua API
 EXPOSE 3000
 
 # Comando para rodar a API
