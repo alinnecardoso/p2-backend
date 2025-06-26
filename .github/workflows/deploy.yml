@@ -1,4 +1,4 @@
-name: CI/CD - Deploy Render
+name: CI/CD - Deploy para o Render
 
 on:
   push:
@@ -7,25 +7,24 @@ on:
 
 jobs:
   deploy:
+    name: Deploy para o Render
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout do código
+      - name: ⬇️ Clonar o repositório
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: 🔧 Instalar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
 
-      - name: Instalar dependências
+      - name: 🧪 Instalar dependências
         run: npm install
 
-      - name: Gerar Prisma Client
-        run: npx prisma generate
-
-      - name: Build e Deploy para Render
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      - name: 🚀 Deploy para o Render
         run: |
-          curl -X POST https://api.render.com/deploy/srv-d1eabrre5dus73b6r6u0?key=EuZO9fYY0EM
+          curl -X POST https://api.render.com/deploy/srv-d1eabrre5dus73b6r6u0?key=EuZO9fYY0EM \
+            -H 'Authorization: Bearer ${{ secrets.RENDER_API_KEY }}' \
+            -H 'Content-Type: application/json' \
+            -d '{}'
