@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: ⬇️ Clonar o repositório
         uses: actions/checkout@v3
@@ -23,17 +24,19 @@ jobs:
 
       - name: 🐳 Build da imagem
         run: |
-          TAG=$(echo "${GITHUB_REF#refs/tags/}")
+          TAG=${GITHUB_REF#refs/tags/}
           docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/p2-backend:$TAG .
 
       - name: 🚀 Push para o Docker Hub
         run: |
-          TAG=$(echo "${GITHUB_REF#refs/tags/}")
+          TAG=${GITHUB_REF#refs/tags/}
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/p2-backend:$TAG
 
       - name: 🌐 Deploy para o Render (produção)
         run: |
+          TAG=${GITHUB_REF#refs/tags/}
           curl -X POST \
             https://api.render.com/deploy/srv-d1fk172li9vc739km1i0?key=${{ secrets.RENDER_API_KEY }} \
             -H "Content-Type: application/json" \
-            -d '{}'
+            -H "Accept: application/json" \
+            -d "{\"clearCache\": false, \"envVars\": [{\"key\":\"IMAGE_TAG\",\"value\":\"$TAG\"}]}"
