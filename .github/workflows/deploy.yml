@@ -1,4 +1,4 @@
-name: CI/CD - Deploy para o Render
+name: CI/CD - Deploy para Render e Docker Hub
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    name: Deploy para o Render
+    name: Deploy para Render e Docker Hub
     runs-on: ubuntu-latest
 
     steps:
@@ -21,6 +21,15 @@ jobs:
 
       - name: 🧪 Instalar dependências
         run: npm install
+
+      - name: 🐳 Login no Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: 🏗️ Build da imagem Docker
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/p2-backend:latest .
+
+      - name: 📤 Push da imagem para o Docker Hub
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/p2-backend:latest
 
       - name: 🚀 Deploy para o Render
         run: |
