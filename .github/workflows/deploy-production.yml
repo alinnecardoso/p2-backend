@@ -34,6 +34,6 @@ jobs:
       - name: 🌐 Deploy para o Render (produção)
         run: |
           curl -X POST \
-            https://api.render.com/deploy/srv-XXXXX?key=${{ secrets.RENDER_API_KEY }} \
+            https://api.render.com/deploy/srv-d1fk172li9vc739km1i0?key=${{ secrets.RENDER_API_KEY }} \
             -H "Content-Type: application/json" \
             -d '{}'
