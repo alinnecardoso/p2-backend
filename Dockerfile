@@ -7,7 +7,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Instalar dependências
-RUN npm ci --only=production
+RUN npm ci --only=production --ignore-scripts
 
 # Gerar Prisma Client
 RUN npx prisma generate
