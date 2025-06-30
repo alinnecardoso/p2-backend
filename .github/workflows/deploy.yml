@@ -3,14 +3,45 @@ name: Deploy
 on:
   push:
     branches:
-      - main        # Deploy para produção
-      - develop     # Deploy para teste
+      - main
+      - develop
   pull_request:
     branches:
       - main
 
 jobs:
+  # Job para criar tags automaticamente quando merge na main
+  auto-tag:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      new-tag: ${{ steps.tag.outputs.new_tag }}
+      changelog: ${{ steps.tag.outputs.changelog }}
+    
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Buscar todo histórico para analisar commits
+
+      - name: 🏷️ Bump version and push tag
+        id: tag
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch  # patch = 1.0.1, minor = 1.1.0, major = 2.0.0
+          release_branches: main
+          pre_release_branches: develop
+          custom_release_rules: |
+            feat:minor
+            fix:patch
+            breaking:major
+            chore:patch
+
   deploy:
+    needs: [auto-tag]
+    # Roda sempre, mas auto-tag só roda na main
+    if: always() && (needs.auto-tag.result == 'success' || needs.auto-tag.result == 'skipped')
     runs-on: ubuntu-latest
     
     steps:
@@ -26,28 +57,38 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 🏷️ Generate tags
-        id: tags
-        run: |
-          if [[ $GITHUB_REF == refs/heads/main ]]; then
-            echo "IMAGE_TAG=latest" >> $GITHUB_OUTPUT
-            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
-          elif [[ $GITHUB_REF == refs/heads/develop ]]; then
-            echo "IMAGE_TAG=develop" >> $GITHUB_OUTPUT
-            echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
-          else
-            echo "IMAGE_TAG=pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
-            echo "ENVIRONMENT=review" >> $GITHUB_OUTPUT
-          fi
+      - name: 🏷️ Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/p2-backend
+          tags: |
+            # Para branch main -> tag latest + versão se houver
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ needs.auto-tag.outputs.new-tag }},enable=${{ needs.auto-tag.outputs.new-tag != '' }}
+            # Para branch develop -> tag develop
+            type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
+            # Para qualquer branch -> tag com nome da branch
+            type=ref,event=branch
+            # Para PRs -> tag pr-numero
+            type=ref,event=pr
+            # SHA para tracking
+            type=sha,prefix={{branch}}-
 
       - name: 🐳 Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/p2-backend:${{ steps.tags.outputs.IMAGE_TAG }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: 📋 Show generated info
+        run: |
+          echo "Nova Git tag criada: ${{ needs.auto-tag.outputs.new-tag }}"
+          echo "Docker tags: ${{ steps.meta.outputs.tags }}"
 
       - name: 🚀 Deploy to Render (Production)
         if: github.ref == 'refs/heads/main'
@@ -64,3 +105,24 @@ jobs:
             "${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}" \
             -H "Content-Type: application/json" \
             -d '{}'
+
+      # Criar Release no GitHub se nova tag foi criada
+      # Criar Release no GitHub se nova tag foi criada
+      - name: 📦 Create GitHub Release
+        if: needs.auto-tag.outputs.new-tag != ''
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.auto-tag.outputs.new-tag }}
+          name: Release ${{ needs.auto-tag.outputs.new-tag }}
+          body: |
+            ## 🚀 Mudanças nesta versão
+            ${{ needs.auto-tag.outputs.changelog }}
+            
+            ## 🐳 Docker Images
+            - `${{ secrets.DOCKERHUB_USERNAME }}/p2-backend:latest`
+            - `${{ secrets.DOCKERHUB_USERNAME }}/p2-backend:${{ needs.auto-tag.outputs.new-tag }}`
+            
+            ## 📦 Deploy
+            Esta versão foi automaticamente deployada para produção.
+          draft: false
+          prerelease: false
