@@ -1,24 +1,30 @@
-# Usa uma imagem oficial do Node como base
 FROM node:20-alpine
 
-# Define o diretório de trabalho dentro do container
-WORKDIR /src
+WORKDIR /app
 
-# Copia os arquivos de dependências
+# Copiar arquivos de dependências
 COPY package*.json ./
+COPY prisma ./prisma/
 
-# Instala as dependências
-RUN npm install
+# Instalar dependências
+RUN npm ci --only=production
 
-# Copia o restante do código da API
-COPY . .
-COPY prisma ./prisma
-
-# Gera o Prisma Client dentro da imagem
+# Gerar Prisma Client
 RUN npx prisma generate
 
-# Expõe a porta da sua API
+# Copiar código da aplicação
+COPY src ./src/
+
+# Criar usuário não-root
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+USER nodejs
+
 EXPOSE 3000
 
-# Comando para rodar as migrations e iniciar a API
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
+
+# Comando de inicialização
 CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]

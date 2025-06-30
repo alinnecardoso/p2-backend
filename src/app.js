@@ -20,6 +20,15 @@ logger.info("🚀 Teste de log no BetterStack");
 logger.error("❌ Erro de teste BetterStack");
 logger.warn("⚠️ Atenção, algo pode dar errado");
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 app.use("/users", userRoutes);
 
 module.exports = app;

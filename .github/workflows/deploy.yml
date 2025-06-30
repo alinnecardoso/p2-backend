@@ -1,43 +1,66 @@
-name: CD - Deploy Produção (Render + Docker Hub)
+name: Deploy
 
 on:
   push:
-    tags:
-      - 'v*.*.*'  # Ex: v1.0.0
+    branches:
+      - main        # Deploy para produção
+      - develop     # Deploy para teste
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  deploy-production:
-    name: Deploy Produção
+  deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: ⬇️ Clonar o repositório
-        uses: actions/checkout@v3
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
 
-      - name: 🔧 Instalar Node.js
-        uses: actions/setup-node@v3
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          node-version: '20'
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 🧪 Instalar dependências
-        run: npm install
-
-      - name: 🐳 Login no Docker Hub
-        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-
-      - name: 🏷️ Definir TAG da versão
-        id: vars
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-
-      - name: 🏗️ Build da imagem com TAG
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/p2-backend:${{ env.TAG }} .
-
-      - name: 📤 Push da imagem com TAG para o Docker Hub
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/p2-backend:${{ env.TAG }}
-
-      - name: 🚀 Deploy para Render (produção)
+      - name: 🏷️ Generate tags
+        id: tags
         run: |
-          curl -X POST https://api.render.com/deploy/srv-d1fk172li9vc739km1i0?key=6sEIZJvWoPw \
-            -H 'Authorization: Bearer ${{ secrets.RENDER_API_KEY_PRODUCTION }}' \
-            -H 'Content-Type: application/json' \
+          if [[ $GITHUB_REF == refs/heads/main ]]; then
+            echo "IMAGE_TAG=latest" >> $GITHUB_OUTPUT
+            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+          elif [[ $GITHUB_REF == refs/heads/develop ]]; then
+            echo "IMAGE_TAG=develop" >> $GITHUB_OUTPUT
+            echo "ENVIRONMENT=staging" >> $GITHUB_OUTPUT
+          else
+            echo "IMAGE_TAG=pr-${{ github.event.number }}" >> $GITHUB_OUTPUT
+            echo "ENVIRONMENT=review" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🐳 Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/p2-backend:${{ steps.tags.outputs.IMAGE_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🚀 Deploy to Render (Production)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          curl -X POST \
+            "${{ secrets.RENDER_DEPLOY_HOOK_PROD }}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
+
+      - name: 🧪 Deploy to Render (Staging)
+        if: github.ref == 'refs/heads/develop'
+        run: |
+          curl -X POST \
+            "${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}" \
+            -H "Content-Type: application/json" \
             -d '{}'
