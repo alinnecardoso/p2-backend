@@ -1,5 +1,6 @@
 require("dotenv").config();
 const winston = require("winston");
+const https = require("https");
 
 const logger = winston.createLogger({
   level: "info",
@@ -12,16 +13,19 @@ const logger = winston.createLogger({
   ],
 });
 
-// Só adiciona o transport HTTP se estiver com variáveis definidas
 if (process.env.BETTERSTACK_HOST && process.env.BETTERSTACK_TOKEN) {
   logger.add(
     new winston.transports.Http({
-      host: process.env.BETTERSTACK_HOST.replace(/^https?:\/\//, ""), // remove http:// ou https://
+      host: process.env.BETTERSTACK_HOST.replace(/^https?:\/\//, ""),
       path: `/logs/${process.env.BETTERSTACK_TOKEN}`,
       port: 443,
-      ssl: true,
+      agent: new https.Agent({ keepAlive: true }),
     })
   );
+
+  logger.info("🟢 BetterStack logging configurado com sucesso");
+} else {
+  logger.warn("⚠️ Variáveis do BetterStack não definidas");
 }
 
 module.exports = logger;
