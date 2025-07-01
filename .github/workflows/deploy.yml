@@ -14,6 +14,10 @@ jobs:
   auto-tag:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     outputs:
       new-tag: ${{ steps.tag.outputs.new_tag }}
       changelog: ${{ steps.tag.outputs.changelog }}
@@ -33,16 +37,19 @@ jobs:
           release_branches: main
           pre_release_branches: develop
           custom_release_rules: |
-            feat:minor
-            fix:patch
-            breaking:major
-            chore:patch
+            feat*:minor
+            fix*:patch
+            breaking*:major
+            chore*:patch
 
   deploy:
     needs: [auto-tag]
     # Roda sempre, mas auto-tag só roda na main
     if: always() && (needs.auto-tag.result == 'success' || needs.auto-tag.result == 'skipped')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     
     steps:
       - name: ⬇️ Checkout code
@@ -107,11 +114,11 @@ jobs:
             -d '{}'
 
       # Criar Release no GitHub se nova tag foi criada
-      # Criar Release no GitHub se nova tag foi criada
       - name: 📦 Create GitHub Release
         if: needs.auto-tag.outputs.new-tag != ''
         uses: softprops/action-gh-release@v1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ needs.auto-tag.outputs.new-tag }}
           name: Release ${{ needs.auto-tag.outputs.new-tag }}
           body: |
