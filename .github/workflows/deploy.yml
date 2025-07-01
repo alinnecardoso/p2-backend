@@ -48,7 +48,7 @@ jobs:
     if: always() && (needs.auto-tag.result == 'success' || needs.auto-tag.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write  # ✅ Changed from 'read' to 'write' for GitHub releases
       packages: write
     
     steps:
@@ -116,7 +116,7 @@ jobs:
       # Criar Release no GitHub se nova tag foi criada
       - name: 📦 Create GitHub Release
         if: needs.auto-tag.outputs.new-tag != ''
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2  # ✅ Updated to v2 for better reliability
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ needs.auto-tag.outputs.new-tag }}
