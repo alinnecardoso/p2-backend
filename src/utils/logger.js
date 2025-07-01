@@ -19,13 +19,12 @@ if (process.env.BETTERSTACK_HOST && process.env.BETTERSTACK_TOKEN) {
       host: process.env.BETTERSTACK_HOST.replace(/^https?:\/\//, ""),
       path: `/logs/${process.env.BETTERSTACK_TOKEN}`,
       port: 443,
+      ssl: true,
       agent: new https.Agent({ keepAlive: true }),
     })
   );
 
   logger.info("🟢 BetterStack logging configurado com sucesso");
-} else {
-  logger.warn("⚠️ Variáveis do BetterStack não definidas");
 }
 
 module.exports = logger;
