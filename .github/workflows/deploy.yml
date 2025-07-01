@@ -72,8 +72,8 @@ jobs:
             type=ref,event=branch
             # Para PRs -> tag pr-numero
             type=ref,event=pr
-            # SHA para tracking
-            type=sha,prefix={{branch}}-
+            # SHA para tracking (corrigido)
+            type=sha,prefix=sha-
 
       - name: 🐳 Build and push Docker image
         uses: docker/build-push-action@v5
